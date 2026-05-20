@@ -56,6 +56,7 @@ def get_db():
                 telefono         TEXT,
                 honorarios_fijos REAL DEFAULT NULL,
                 activo           INTEGER DEFAULT 1,
+                comentarios      TEXT DEFAULT NULL,
                 fecha_registro   TEXT DEFAULT (datetime('now'))
             );
             CREATE TABLE IF NOT EXISTS bitacora (
@@ -75,6 +76,8 @@ def get_db():
         """)
         # Migración: agregar columnas si no existen en DB antigua
         try: g.db.execute("ALTER TABLE clientes ADD COLUMN activo INTEGER DEFAULT 1")
+        except: pass
+        try: g.db.execute("ALTER TABLE clientes ADD COLUMN comentarios TEXT DEFAULT NULL")
         except: pass
         try: g.db.execute("ALTER TABLE bitacora ADD COLUMN estado_cobro TEXT DEFAULT 'pendiente_cobro'")
         except: pass
@@ -126,12 +129,12 @@ def crear_cliente():
     db = get_db()
     db.execute("""
         INSERT INTO clientes
-          (nombre_completo,nit,dpi,fecha_nacimiento,contrasena_av,contrasena_fel,telefono,honorarios_fijos,activo)
-        VALUES (?,?,?,?,?,?,?,?,1)
+          (nombre_completo,nit,dpi,fecha_nacimiento,contrasena_av,contrasena_fel,telefono,honorarios_fijos,activo,comentarios)
+        VALUES (?,?,?,?,?,?,?,?,1,?)
     """, (d.get("nombre_completo"), d.get("nit"), d.get("dpi"),
           d.get("fecha_nacimiento"),
           enc(d.get("contrasena_av","")), enc(d.get("contrasena_fel","")),
-          d.get("telefono"), d.get("honorarios_fijos")))
+          d.get("telefono"), d.get("honorarios_fijos"), d.get("comentarios")))
     db.commit()
     return jsonify({"id": db.execute("SELECT last_insert_rowid()").fetchone()[0]})
 
@@ -152,7 +155,7 @@ def actualizar_cliente(cid):
     db = get_db()
     campos, vals = [], []
     for k, v in d.items():
-        if k in ("nombre_completo","nit","dpi","fecha_nacimiento","telefono","honorarios_fijos","activo"):
+        if k in ("nombre_completo","nit","dpi","fecha_nacimiento","telefono","honorarios_fijos","activo","comentarios"):
             campos.append(f"{k}=?"); vals.append(v)
         elif k == "contrasena_av":
             campos.append("contrasena_av=?"); vals.append(enc(v))
